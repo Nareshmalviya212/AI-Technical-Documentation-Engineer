@@ -14,6 +14,8 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+st.caption("🚀 CI/CD Deployment v1.0")
+
 
 # ============================================================
 # CUSTOM CSS
