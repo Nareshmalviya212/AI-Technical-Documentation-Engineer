@@ -1,41 +1,45 @@
-from src.loader import DocumentLoader
-from src.chunker import DocumentChunker
+from langchain_core.documents import Document
+
 from src.embeddings import EmbeddingModel
 
 
-# 1. Load documents
-loader = DocumentLoader("data/documents")
-documents = loader.load_documents()
+class FakeEmbedding:
 
-print(f"Documents loaded: {len(documents)}")
+    def embed_documents(self, texts):
+        return [
+            [1.0, 0.0, 0.0]
+            for _ in texts
+        ]
 
-
-# 2. Chunk documents
-chunker = DocumentChunker(
-    chunk_size=500,
-    chunk_overlap=100
-)
-
-chunks = chunker.split_documents(documents)
-
-print(f"Chunks created: {len(chunks)}")
+    def embed_query(self, query):
+        return [1.0, 0.0, 0.0]
 
 
-# 3. Load embedding model
-print("\nLoading embedding model...")
+def test_embed_documents(monkeypatch):
 
-embedding_model = EmbeddingModel()
+    embedding_model = EmbeddingModel.__new__(EmbeddingModel)
 
-print("Embedding model loaded.")
+    embedding_model.model = FakeEmbedding()
+
+    documents = [
+        Document(page_content="FastAPI is a web framework."),
+        Document(page_content="FastAPI supports dependencies.")
+    ]
+
+    vectors = embedding_model.embed_documents(documents)
+
+    assert len(vectors) == 2
+    assert len(vectors[0]) == 3
 
 
-# 4. Generate embeddings
-vectors = embedding_model.embed_documents(chunks)
+def test_embed_query(monkeypatch):
 
-print(f"\nNumber of vectors: {len(vectors)}")
+    embedding_model = EmbeddingModel.__new__(EmbeddingModel)
 
-if vectors:
-    print(f"Vector dimension: {len(vectors[0])}")
+    embedding_model.model = FakeEmbedding()
 
-    print("\nFirst vector:")
-    print(vectors[0][:10])
+    vector = embedding_model.embed_query(
+        "What is FastAPI?"
+    )
+
+    assert len(vector) == 3

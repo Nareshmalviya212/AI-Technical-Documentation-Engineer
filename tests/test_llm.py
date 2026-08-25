@@ -1,14 +1,36 @@
-from src.llm import generate_response
+from src import llm
 
 
-prompt = """
-You are an AI technical documentation assistant.
+class FakeMessage:
+    content = "FastAPI is a modern Python web framework."
 
-Explain in simple terms:
-What is FastAPI?
-"""
 
-answer = generate_response(prompt)
+class FakeChoice:
+    message = FakeMessage()
 
-print("\nAI Response:\n")
-print(answer)
+
+class FakeResponse:
+    choices = [FakeChoice()]
+
+
+class FakeCompletions:
+
+    def create(self, **kwargs):
+        return FakeResponse()
+
+
+def test_generate_response(monkeypatch):
+
+    monkeypatch.setattr(
+        llm.client.chat,
+        "completions",
+        FakeCompletions()
+    )
+
+    answer = llm.generate_response(
+        "What is FastAPI?"
+    )
+
+    assert answer == (
+        "FastAPI is a modern Python web framework."
+    )

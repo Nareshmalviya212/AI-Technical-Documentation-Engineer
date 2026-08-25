@@ -1,14 +1,16 @@
 from src.loader import DocumentLoader
 
-loader = DocumentLoader("data/documents")
 
-docs = loader.load_documents()
+def test_load_documents():
+    loader = DocumentLoader("data/documents")
+    documents = loader.load_documents()
 
-print(f"\nLoaded {len(docs)} document(s)\n")
+    assert len(documents) > 0
 
-for i, doc in enumerate(docs, start=1):
-    print(f"\nDocument {i}")
-    print("-" * 50)
-    print("Metadata:", doc.metadata)
-    print("\nContent:")
-    print(doc.page_content)
+    for document in documents:
+        assert document.page_content
+        assert document.metadata["source_name"]
+        assert document.metadata["source_url"]
+        assert document.metadata["category"]
+        assert document.metadata["topic"]
+        assert document.metadata["filename"]

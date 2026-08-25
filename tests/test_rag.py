@@ -1,47 +1,57 @@
+from langchain_core.documents import Document
+
 from src.rag_pipeline import RAGPipeline
 
 
-rag = RAGPipeline(
-    vector_store_path="vector_store",
-    top_k=3
-)
+class FakeRetriever:
+
+    def retrieve(self, question):
+        return [
+            {
+                "document": Document(
+                    page_content="FastAPI is a Python web framework.",
+                    metadata={
+                        "source_name": "FastAPI Official Documentation",
+                        "source_url": "https://fastapi.tiangolo.com/",
+                        "category": "basics",
+                        "topic": "introduction",
+                        "filename": "fastapi_intro.md"
+                    }
+                ),
+                "score": 0.90
+            }
+        ]
 
 
-#question = "What is FastAPI and what can it be used for?"
-question = "what is the capital of france?"
+def test_rag_pipeline(monkeypatch):
 
+    rag = RAGPipeline.__new__(RAGPipeline)
 
-result = rag.ask(question)
+    rag.retriever = FakeRetriever()
 
+    def fake_generate_response(prompt):
+        assert "FastAPI is a Python web framework." in prompt
+        return "FastAPI is a Python web framework."
 
-print("\n" + "=" * 70)
-print("QUESTION")
-print("=" * 70)
+    monkeypatch.setattr(
+        "src.rag_pipeline.generate_response",
+        fake_generate_response
+    )
 
-print(question)
+    result = rag.ask("What is FastAPI?")
 
+    assert result["answer"] == (
+        "FastAPI is a Python web framework."
+    )
 
-print("\n" + "=" * 70)
-print("ANSWER")
-print("=" * 70)
+    assert len(result["sources"]) == 1
 
-print(result["answer"])
+    assert (
+        result["sources"][0]["filename"]
+        == "fastapi_intro.md"
+    )
 
-
-print("\n" + "=" * 70)
-print("SOURCES")
-print("=" * 70)
-
-for i, source in enumerate(
-    result["sources"],
-    start=1
-):
-
-    print(f"\nSource {i}")
-    print("-" * 50)
-
-    print("Source:", source["source_name"])
-    print("Topic:", source["topic"])
-    print("Document:", source["filename"])
-    print("URL:", source["source_url"])
-    print("Similarity:", source["score"])
+    assert (
+        result["sources"][0]["score"]
+        == 0.90
+    )

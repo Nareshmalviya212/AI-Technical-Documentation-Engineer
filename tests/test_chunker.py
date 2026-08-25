@@ -2,32 +2,19 @@ from src.loader import DocumentLoader
 from src.chunker import DocumentChunker
 
 
-# Load documents
-loader = DocumentLoader("data/documents")
-documents = loader.load_documents()
+def test_split_documents_into_chunks():
+    loader = DocumentLoader("data/documents")
+    documents = loader.load_documents()
 
-print(f"Documents loaded: {len(documents)}")
+    chunker = DocumentChunker(
+        chunk_size=500,
+        chunk_overlap=100
+    )
 
+    chunks = chunker.split_documents(documents)
 
-# Create chunks
-chunker = DocumentChunker(
-    chunk_size=500,
-    chunk_overlap=100
-)
+    assert len(chunks) > 0
 
-chunks = chunker.split_documents(documents)
-
-print(f"Chunks created: {len(chunks)}")
-
-
-# Display chunks
-for i, chunk in enumerate(chunks, start=1):
-
-    print("\n" + "=" * 60)
-    print(f"CHUNK {i}")
-
-    print("\nMetadata:")
-    print(chunk.metadata)
-
-    print("\nContent:")
-    print(chunk.page_content)
+    for chunk in chunks:
+        assert chunk.page_content
+        assert "chunk_id" in chunk.metadata

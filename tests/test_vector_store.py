@@ -1,103 +1,66 @@
-from src.loader import DocumentLoader
-from src.chunker import DocumentChunker
-from src.embeddings import EmbeddingModel
+from langchain_core.documents import Document
+
 from src.vector_store import FAISSVectorStore
 
 
-# -----------------------------
-# 1. Load documents
-# -----------------------------
+def test_add_and_search_documents():
+    documents = [
+        Document(page_content="FastAPI is a web framework."),
+        Document(page_content="FastAPI supports dependency injection."),
+        Document(page_content="Python is a programming language."),
+    ]
 
-loader = DocumentLoader("data/documents")
+    embeddings = [
+        [1.0, 0.0, 0.0],
+        [0.9, 0.1, 0.0],
+        [0.0, 0.0, 1.0],
+    ]
 
-documents = loader.load_documents()
+    vector_store = FAISSVectorStore(dimension=3)
 
-print(f"Documents loaded: {len(documents)}")
+    vector_store.add_documents(
+        documents,
+        embeddings
+    )
 
+    results = vector_store.search(
+        [1.0, 0.0, 0.0],
+        top_k=2
+    )
 
-# -----------------------------
-# 2. Chunk documents
-# -----------------------------
-
-chunker = DocumentChunker(
-    chunk_size=500,
-    chunk_overlap=100
-)
-
-chunks = chunker.split_documents(documents)
-
-print(f"Chunks created: {len(chunks)}")
-
-
-# -----------------------------
-# 3. Create embeddings
-# -----------------------------
-
-embedding_model = EmbeddingModel()
-
-embeddings = embedding_model.embed_documents(chunks)
-
-print(f"Embeddings generated: {len(embeddings)}")
+    assert len(results) == 2
+    assert results[0]["document"].page_content == "FastAPI is a web framework."
+    assert results[0]["score"] > results[1]["score"]
 
 
-# -----------------------------
-# 4. Create FAISS
-# -----------------------------
+def test_save_and_load_vector_store(tmp_path):
+    documents = [
+        Document(page_content="FastAPI is a web framework.")
+    ]
 
-dimension = len(embeddings[0])
+    embeddings = [
+        [1.0, 0.0, 0.0]
+    ]
 
-vector_store = FAISSVectorStore(
-    dimension=dimension
-)
+    vector_store = FAISSVectorStore(dimension=3)
 
-vector_store.add_documents(
-    chunks,
-    embeddings
-)
+    vector_store.add_documents(
+        documents,
+        embeddings
+    )
 
-print(f"FAISS vectors: {vector_store.index.ntotal}")
+    save_path = tmp_path / "vector_store"
 
+    vector_store.save(save_path)
 
-# -----------------------------
-# 5. Test semantic search
-# -----------------------------
+    loaded_store = FAISSVectorStore.load(save_path)
 
-query = "How can I build APIs using FastAPI?"
+    results = loaded_store.search(
+        [1.0, 0.0, 0.0],
+        top_k=1
+    )
 
-query_embedding = embedding_model.embed_query(query)
-
-results = vector_store.search(
-    query_embedding,
-    top_k=3
-)
-
-
-# -----------------------------
-# 6. Display results
-# -----------------------------
-
-print("\n" + "=" * 60)
-print("SEARCH RESULTS")
-print("=" * 60)
-
-for i, result in enumerate(results, start=1):
-
-    document = result["document"]
-    score = result["score"]
-
-    print(f"\nResult {i}")
-    print("-" * 60)
-
-    print("Similarity Score:", score)
-
-    print("Metadata:")
-    print(document.metadata)
-
-    print("\nContent:")
-    print(document.page_content)
-
-# Save vector database
-
-vector_store.save("vector_store")
-
-print("\nVector store saved successfully.")
+    assert len(results) == 1
+    assert results[0]["document"].page_content == (
+        "FastAPI is a web framework."
+    )
